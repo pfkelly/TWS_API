@@ -1,3 +1,13 @@
+# Eclipse
+.claspath 
+.project 
+.settings/ 
+
+#IntelliJ
+.idea/ 
+*.iml 
+*.iws 
+
 # Compiled class file
 *.class
 
