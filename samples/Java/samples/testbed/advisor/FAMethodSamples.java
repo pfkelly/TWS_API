@@ -12,8 +12,8 @@ public class FAMethodSamples {
                 + "<name>Equal_Quantity</name>"
                 + "<ListOfAccts varName=\"list\">"
                     //Replace with your own accountIds
-                    + "<String>DU119915</String>"
-                    + "<String>DU119916</String>"
+                    + "<String>DU1338699</String>"
+                    + "<String>DU1338700</String>"
                 + "</ListOfAccts>"
                 + "<defaultMethod>EqualQuantity</defaultMethod>"
             + "</Group>"

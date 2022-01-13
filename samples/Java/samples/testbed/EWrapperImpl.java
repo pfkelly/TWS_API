@@ -3,7 +3,10 @@
 
 package samples.testbed;
 
+import java.text.DateFormat;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -61,7 +64,9 @@ public class EWrapperImpl implements EWrapper {
 			double impliedVol, double delta, double optPrice,
 			double pvDividend, double gamma, double vega, double theta,
 			double undPrice) {
-		System.out.println("TickOptionComputation. TickerId: "+tickerId+", field: "+field+", TickAttrib: "+tickAttrib+", ImpliedVolatility: "+impliedVol+", Delta: "+delta
+		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
+
+		System.out.println(sdf.format(new Date()) + "TickOptionComputation. TickerId: "+tickerId+", field: "+field+", TickAttrib: "+tickAttrib+", ImpliedVolatility: "+impliedVol+", Delta: "+delta
                 +", OptionPrice: "+optPrice+", pvDividend: "+pvDividend+", Gamma: "+gamma+", Vega: "+vega+", Theta: "+theta+", UnderlyingPrice: "+undPrice);
 	}
 	//! [tickoptioncomputation]
@@ -432,7 +437,7 @@ public class EWrapperImpl implements EWrapper {
 	public void securityDefinitionOptionalParameter(int reqId, String exchange,
 			int underlyingConId, String tradingClass, String multiplier,
 			Set<String> expirations, Set<Double> strikes) {
-		System.out.println("Security Definition Optional Parameter. Request: "+reqId+", Trading Class: "+tradingClass+", Multiplier: "+multiplier+" \n");
+		System.out.println("Security Definition Optional Parameter. Request: "+reqId+", Trading Class: "+tradingClass+", Exchange: "+exchange+", Multiplier: "+multiplier+ ", Expirations: " + expirations + ", strikes: " + strikes + " \n");
 	}
 	//! [securityDefinitionOptionParameter]
 

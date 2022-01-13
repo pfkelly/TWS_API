@@ -8,6 +8,7 @@ import java.util.List;
 
 import com.ib.client.ComboLeg;
 import com.ib.client.Contract;
+import com.ib.client.Types;
 
 public class ContractSamples {
 	
@@ -194,8 +195,8 @@ public class ContractSamples {
 		contract.secType("OPT");
 		contract.currency("USD");
 		contract.exchange("SMART");
-		contract.lastTradeDateOrContractMonth("20170120");
-		contract.strike(615);
+		contract.lastTradeDateOrContractMonth("20210121");
+		contract.strike(2730);
 		contract.right("C");
 		contract.multiplier("100");
 		return contract;
@@ -262,7 +263,7 @@ public class ContractSamples {
 		contract.secType("FUT");
 		contract.currency("USD");
 		contract.exchange("GLOBEX");
-		contract.lastTradeDateOrContractMonth("201803");
+		contract.lastTradeDateOrContractMonth("202203");
 		//! [futcontract]
 		return contract;
 	}
@@ -359,7 +360,21 @@ public class ContractSamples {
 		//! [optionforquery]
 		return contract;
 	}
-	
+
+	public static Contract OptionForStock(String symbol) {
+		//! [optionforquery]
+		Contract contract = new Contract();
+		contract.symbol(symbol);
+		contract.secType("OPT");
+		contract.currency("USD");
+		contract.exchange("SMART");
+		contract.lastTradeDateOrContractMonth("202203");
+		contract.right(Types.Right.Call);
+		contract.strike(10.50);
+		//! [optionforquery]
+		return contract;
+	}
+
 	public static Contract OptionComboContract() {
 		//! [bagoptcontract]
 		Contract contract = new Contract();
