@@ -48,7 +48,7 @@ public class Testbed {
 		tickDataOperations(wrapper.getClient());
 		//tickOptionComputations(wrapper.getClient());
 //		optionsOperations(wrapper.getClient());
-		//orderOperations(wrapper.getClient(), wrapper.getCurrentOrderId());
+		orderOperations(wrapper.getClient(), wrapper.getCurrentOrderId());
 //		contractOperations(wrapper.getClient());
 		//hedgeSample(wrapper.getClient(), wrapper.getCurrentOrderId());
 //		testAlgoSamples(wrapper.getClient(), wrapper.getCurrentOrderId());

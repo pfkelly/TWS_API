@@ -7,6 +7,8 @@ import com.ib.client.TickAttrib;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static java.lang.Thread.sleep;
+
 public class MyEWrapper extends EWrapperImpl{
 
     private int numberOfLoadedSymbols = 0;
@@ -25,7 +27,6 @@ public class MyEWrapper extends EWrapperImpl{
     private Map<String, Double> symbolToAskImpliedVol = new HashMap<>();
     private Map<String, Double> symbolToLastImpliedVol = new HashMap<>();
     private Map<String, Double> symbolToModelImpliedVol = new HashMap<>();
-    private boolean loadedPriceForAllStocks = false;
 
     public MyEWrapper(String symbolArg) {
         super();
@@ -84,7 +85,6 @@ public class MyEWrapper extends EWrapperImpl{
                 case 2: lastAskForStock.put(symbol, price);
                     break;
                 case 4: lastPriceForStock.put(symbol, price);
-                    loadedPriceForAllStocks = lastPriceForStock.size() == symbols.size();
                     break;
                 default:
             }
@@ -142,12 +142,12 @@ public class MyEWrapper extends EWrapperImpl{
         return symbols;
     }
 
-    public Double getLastPriceForStock(String symbol) {
-        return lastPriceForStock.get(symbol);
+    public boolean isLoadedPriceForAllStocks() {
+        return lastPriceForStock.size() == symbols.size();
     }
 
-    public boolean isLoadedPriceForAllStocks() {
-        return loadedPriceForAllStocks;
+    public boolean isLoadedBidAndAskForAllStocks() {
+        return symbols.size() == lastBidForStock.size() && symbols.size() == lastAskForStock.size();
     }
 
     public Map<Integer, String> getOptionDataReqIdToSymbol() {
@@ -156,7 +156,7 @@ public class MyEWrapper extends EWrapperImpl{
 
     public Double getOptionStrikePrice(String symbol) {
         Double result = Double.MAX_VALUE;
-        Double lastPrice = lastPriceForStock.get(symbol);
+        Double lastPrice = calculateLastPriceForStock(symbol);
         StockAndOptionContracts stkOption = stockAndOptionContracts.get(symbol);
         Set<Double> strikes = stkOption.getSecurityDefinitionOptionalParameter().getStrikes();
         if (strikes == null) {
@@ -184,5 +184,47 @@ public class MyEWrapper extends EWrapperImpl{
 
     public Map<String, Double> getSymbolToModelImpliedVol() {
         return symbolToModelImpliedVol;
+    }
+
+    public void removeContractsWithoutCalculatedLastPrice() {
+        boolean loadedLastPriceForAllStocks = true;
+        for (String symbol : symbols) {
+            if (calculateLastPriceForStock(symbol) == null) {
+                System.out.println("Removing Symbol - unable to retrieve stock price: " + symbol);
+                stockAndOptionContracts.remove(symbol);
+                loadedLastPriceForAllStocks = false;
+            }
+        }
+        if(loadedLastPriceForAllStocks) {
+            System.out.println("Was able to load lastPrice for all Stocks");
+        }
+    }
+
+    private Double calculateLastPriceForStock(String symbol) {
+        Double result = lastPriceForStock.get(symbol);
+        if (result == null){
+            Double lastBid = lastBidForStock.get(symbol);
+            Double lastAsk = lastAskForStock.get(symbol);
+            if (lastAsk == null || lastBid == null) {
+                return result;
+            }
+            result = lastAsk / 2 + lastBid / 2;
+        }
+        return result;
+    }
+
+    public boolean haveDataToCreateAllOptionOrders() {
+        int numberOfOptions = getOptionDataReqIdToSymbol().size();
+        return numberOfOptions == getSymbolToModelImpliedVol().size() &&
+                numberOfOptions == getSymbolToAskImpliedVol().size() &&
+                numberOfOptions == getSymbolToBidImpliedVol().size();
+    }
+
+    public Collection<String> getUnloadedVolSymbols() {
+        Collection<String> optionDataRequestSymbols = new HashSet<>(optionDataReqIdToSymbol.values());
+        optionDataRequestSymbols.removeAll(symbolToModelImpliedVol.keySet());
+        optionDataRequestSymbols.removeAll(symbolToAskImpliedVol.keySet());
+        optionDataRequestSymbols.removeAll(symbolToBidImpliedVol.keySet());
+        return optionDataRequestSymbols;
     }
 }

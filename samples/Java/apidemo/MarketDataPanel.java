@@ -48,7 +48,7 @@ import com.ib.controller.ApiController.ISymbolSamplesHandler;
 import com.ib.controller.ApiController.IWshEventDataHandler;
 import com.ib.controller.ApiController.IWshMetaDataHandler;
 
-import TestJavaClient.SmartComboRoutingParamsDlg;
+import testjavaclient.SmartComboRoutingParamsDlg;
 
 import com.ib.controller.Bar;
 import com.ib.controller.Formats;

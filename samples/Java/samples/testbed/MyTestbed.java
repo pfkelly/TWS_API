@@ -6,9 +6,12 @@ package samples.testbed;
 import com.ib.client.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+
+import static java.lang.Thread.sleep;
 
 public class MyTestbed {
 
@@ -55,24 +58,52 @@ public class MyTestbed {
 		getOptionChains(wrapper);
 		requestMarketDataForOptions(wrapper);
 		waitForOptionMarketData(wrapper);
+		Set<Contract> callContracts = generateCallContracts(wrapper);
+
 
 //		optionsOperations(wrapper);
 
-		Thread.sleep(100000);
+		Thread.sleep(1000);
 
 		m_client.eDisconnect();
 		System.out.println("Exiting...");
 	}
 
-	private static void waitForOptionMarketData(MyEWrapper wrapper) throws InterruptedException {
-		int optionsToCheck = wrapper.getOptionDataReqIdToSymbol().size();
-		int optionModelVolLoaded = wrapper.getSymbolToModelImpliedVol().size();
-		while (optionsToCheck >optionModelVolLoaded) {
-			Thread.sleep(100);
-			System.out.println("optionsToCheck: " + optionsToCheck + "optionModelVolLoaded: " + optionModelVolLoaded);
-			optionModelVolLoaded = wrapper.getSymbolToModelImpliedVol().size();
+	private static Set<Contract> generateCallContracts(MyEWrapper wrapper) {
+		Set<Contract> results = new HashSet<>();
+		return results;
+	}
+
+	private static void waitUntilStockPricesLoaded(MyEWrapper wrapper) throws InterruptedException {
+		LocalDateTime delay = LocalDateTime.now().plusMinutes(1);
+		while (!wrapper.isLoadedPriceForAllStocks() && delay.isAfter(LocalDateTime.now())) {
+			sleep(100);
 		}
-		Thread.sleep(1000);
+		if (!wrapper.isLoadedPriceForAllStocks()) {
+			delay = LocalDateTime.now().plusMinutes(1);
+			while (!wrapper.isLoadedBidAndAskForAllStocks() && delay.isAfter(LocalDateTime.now())) {
+				if (wrapper.isLoadedPriceForAllStocks()) {
+					break;
+				}
+				sleep(100);
+			}
+		}
+		wrapper.removeContractsWithoutCalculatedLastPrice();
+	}
+
+
+	private static void waitForOptionMarketData(MyEWrapper wrapper) throws InterruptedException {
+		LocalDateTime delay = LocalDateTime.now().plusMinutes(1);
+		System.out.println("waiting to load Option data");
+		while (!wrapper.haveDataToCreateAllOptionOrders() && delay.isAfter(LocalDateTime.now())) {
+			sleep(100);
+		}
+
+		if (wrapper.haveDataToCreateAllOptionOrders()) {
+			System.out.println("loaded all options vols!");
+		} else {
+			System.out.println("Unable to find vol for: " + wrapper.getUnloadedVolSymbols());
+		}
 	}
 
 	private static void requestMarketDataForOptions(MyEWrapper wrapper) {
@@ -125,14 +156,13 @@ public class MyTestbed {
 		}
 		// TODO: Add timeout logic
 
-		while(!wrapper.isLoadedPriceForAllStocks()) {
-			Thread.sleep(100);
-		}
+		waitUntilStockPricesLoaded(wrapper);
+
 		// Cancel market data
 		for (Integer reqId : mktDataReqIdStockToSymbol.keySet()) {
 			client.cancelMktData(reqId);
 		}
-		System.out.println("loaded all the Prices");
+		System.out.println("exiting getMarketDataForStocks");
 	}
 
 	private static void getStockContracts(MyEWrapper wrapper) {
@@ -147,6 +177,7 @@ public class MyTestbed {
 		}
 		boolean loadingStockMarketData = true;
 		Map<String, StockAndOptionContracts> stockAndOptionContracts = wrapper.getStockAndOptionContracts();
+		System.out.println("requested all stock Contracts");
 		while (loadingStockMarketData) {
 			loadingStockMarketData = false;
 			for(Map.Entry<String, StockAndOptionContracts> entry : stockAndOptionContracts.entrySet()) {
@@ -156,6 +187,7 @@ public class MyTestbed {
 				}
 			}
 		}
+		System.out.println("Received all Stock Contracts");
 	}
 
 private static void getOptionChains(MyEWrapper wrapper) throws InterruptedException {
@@ -165,10 +197,12 @@ private static void getOptionChains(MyEWrapper wrapper) throws InterruptedExcept
 		Map<Integer, String> securityDefOptionalParameterReqIdToSymbol = wrapper.getSecurityDefOptionalParameterReqIdToSymbol();
 		for (StockAndOptionContracts stockContract : stockContracts) {
 			Contract contract = stockContract.getContractDetails().contract();
+
 			securityDefOptionalParameterReqIdToSymbol.put(requestId, contract.symbol());
 			client.reqSecDefOptParams(requestId++, contract.symbol(), "", Types.SecType.STK.getApiString(), contract.conid());
 		}
 		boolean optionChainsLoading = true;
+		System.out.println("waiting for SecDefOptParams to complete");
 		while (optionChainsLoading) {
 			optionChainsLoading = false;
 			Thread.sleep(100);
@@ -179,6 +213,7 @@ private static void getOptionChains(MyEWrapper wrapper) throws InterruptedExcept
 				}
 			}
 		}
+		System.out.println("loaded all SecDefOptParams");
 	}
 
 	private static void optionsOperations(MyEWrapper wrapper) {
