@@ -88,7 +88,7 @@ public class MyTestbed {
 				sleep(100);
 			}
 		}
-		wrapper.removeContractsWithoutCalculatedLastPrice();
+		System.out.println("exiting waitUntilStockPricesLoaded()");
 	}
 
 
@@ -147,15 +147,17 @@ public class MyTestbed {
 	private static void getMarketDataForStocks(MyEWrapper wrapper) throws InterruptedException {
 		EClientSocket client = wrapper.getClient();
 		Map<Integer, String> mktDataReqIdStockToSymbol = wrapper.getStockDataReqIdToSymbol();
-		Collection<StockAndOptionContracts> stockAndOptionContracts = wrapper.getStockAndOptionContracts().values();
-		for (StockAndOptionContracts stockAndOptionContract : stockAndOptionContracts) {
-			ContractDetails contractDetails = stockAndOptionContract.getContractDetails();
-			Contract contract = contractDetails.contract();
-			mktDataReqIdStockToSymbol.put(requestId, contract.symbol());
-			client.reqMktData(requestId++, contract, "", false, false, null);
-		}
-		// TODO: Add timeout logic
 
+		Collection<StockAndOptionContracts> stockAndOptionContracts = wrapper.getStockAndOptionContracts().values();
+		Collection<Contract> contracts = wrapper.getSymbolToContract().values();
+		for (Contract contract : contracts) {
+			if (contract.conid() == 0) {
+				System.out.println("Not requesting market data for symbol: " + contract.symbol());
+			} else {
+				mktDataReqIdStockToSymbol.put(requestId, contract.symbol());
+				client.reqMktData(requestId++, contract, "", false, false, null);
+			}
+		}
 		waitUntilStockPricesLoaded(wrapper);
 
 		// Cancel market data
@@ -165,39 +167,33 @@ public class MyTestbed {
 		System.out.println("exiting getMarketDataForStocks");
 	}
 
-	private static void getStockContracts(MyEWrapper wrapper) {
-		Set<String> symbols = wrapper.getSymbols();
+	private static void getStockContracts(MyEWrapper wrapper) throws InterruptedException {
+		Collection<String> symbols = wrapper.getSortedSymbols().values();
+		Map<Integer, String> contractRequestIdToSymbol = wrapper.getContractRequestIdToSymbol();
 		for (String symbol: symbols) {
 			Contract contract = new Contract();
 			contract.secType(Types.SecType.STK);
 			contract.symbol(symbol);
 			contract.exchange("SMART");
 			contract.currency("USD");
+			contractRequestIdToSymbol.put(requestId, symbol);
 			wrapper.getClient().reqContractDetails(requestId++, contract);
+
 		}
 		boolean loadingStockMarketData = true;
-		Map<String, StockAndOptionContracts> stockAndOptionContracts = wrapper.getStockAndOptionContracts();
 		System.out.println("requested all stock Contracts");
-		while (loadingStockMarketData) {
-			loadingStockMarketData = false;
-			for(Map.Entry<String, StockAndOptionContracts> entry : stockAndOptionContracts.entrySet()) {
-				if (entry.getValue() == null || entry.getValue().getContractDetails() == null) {
-					loadingStockMarketData = true;
-					break;
-				}
-			}
+		while (wrapper.getSortedSymbols().size() > wrapper.getSymbolToContract().size()) {
+			Thread.sleep(100);
 		}
 		System.out.println("Received all Stock Contracts");
 	}
 
-private static void getOptionChains(MyEWrapper wrapper) throws InterruptedException {
+	private static void getOptionChains(MyEWrapper wrapper) throws InterruptedException {
 		EClientSocket client = wrapper.getClient();
-		Map<String, StockAndOptionContracts> stockAndOptionContracts = wrapper.getStockAndOptionContracts();
-		Collection<StockAndOptionContracts> stockContracts = stockAndOptionContracts.values();
 		Map<Integer, String> securityDefOptionalParameterReqIdToSymbol = wrapper.getSecurityDefOptionalParameterReqIdToSymbol();
-		for (StockAndOptionContracts stockContract : stockContracts) {
-			Contract contract = stockContract.getContractDetails().contract();
+		Set<Contract> contractsWithPrice = wrapper.getContractsWithPrice();
 
+		for (Contract contract : contractsWithPrice) {
 			securityDefOptionalParameterReqIdToSymbol.put(requestId, contract.symbol());
 			client.reqSecDefOptParams(requestId++, contract.symbol(), "", Types.SecType.STK.getApiString(), contract.conid());
 		}
@@ -206,12 +202,12 @@ private static void getOptionChains(MyEWrapper wrapper) throws InterruptedExcept
 		while (optionChainsLoading) {
 			optionChainsLoading = false;
 			Thread.sleep(100);
-			for (Map.Entry<String, StockAndOptionContracts> entry : stockAndOptionContracts.entrySet()) {
-				if (entry.getValue() == null || entry.getValue().getSecurityDefinitionOptionalParameter() == null) {
-					optionChainsLoading = true;
-					break;
-				}
-			}
+//			for (Map.Entry<String, StockAndOptionContracts> entry : stockAndOptionContracts.entrySet()) {
+//				if (entry.getValue() == null || entry.getValue().getSecurityDefinitionOptionalParameter() == null) {
+//					optionChainsLoading = true;
+//					break;
+//				}
+//			}
 		}
 		System.out.println("loaded all SecDefOptParams");
 	}

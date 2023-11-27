@@ -28,7 +28,8 @@ public enum MarketValueTag {
     TBondValue("TBond"),
     TBillValue("TBill"),
     WarrantValue("Warrant"),
-    FxCashBalance("FxCashBalance");
+    FxCashBalance("FxCashBalance"),
+    Cryptocurrency("Cryptocurrency");
 
     private final String description;
 

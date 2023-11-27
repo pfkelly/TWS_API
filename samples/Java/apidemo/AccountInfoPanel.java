@@ -28,6 +28,7 @@ import com.ib.controller.Position;
 
 import apidemo.util.NewTabbedPanel;
 import apidemo.util.NewTabbedPanel.INewTab;
+import org.jetbrains.annotations.NotNull;
 
 public class AccountInfoPanel extends JPanel implements INewTab, IAccountHandler {
 	private DefaultListModel<String> m_acctList = new DefaultListModel<>();
@@ -41,7 +42,7 @@ public class AccountInfoPanel extends JPanel implements INewTab, IAccountHandler
 	AccountInfoPanel() {
 		m_lastUpdated.setHorizontalAlignment( SwingConstants.RIGHT);
 		
-		m_accounts.setPreferredSize( new Dimension( 10000, 100) );
+		m_accounts.setPreferredSize( new Dimension( 10000, 3) );
 		JScrollPane acctScroll = new JScrollPane( m_accounts);
 		acctScroll.setBorder( new TitledBorder( "Select Account"));
 
@@ -109,7 +110,7 @@ public class AccountInfoPanel extends JPanel implements INewTab, IAccountHandler
 	}
 	
 	/** Receive position. */
-	public synchronized void updatePortfolio( Position position) {
+	public synchronized void updatePortfolio(@NotNull Position position) {
 		if (position.account().equals( m_selAcct)) {
 			m_portfolioModel.update( position);
 		}

@@ -1,5 +1,6 @@
 package samples.testbed;
 
+import com.ib.client.Contract;
 import com.ib.client.ContractDetails;
 import com.ib.client.EWrapperMsgGenerator;
 import com.ib.client.TickAttrib;
@@ -11,9 +12,10 @@ import static java.lang.Thread.sleep;
 
 public class MyEWrapper extends EWrapperImpl{
 
-    private int numberOfLoadedSymbols = 0;
+    private SortedMap<Integer, String> sortedSymbols = Collections.synchronizedSortedMap(new TreeMap<>());
+    private Map<Integer, String> contractRequestIdToSymbol = new Hashtable<>();
+    private Map<String, Contract> symbolToContract = new Hashtable<>();
 
-    private Set<String> symbols;
     //TODO: Do these maps need to be thread safe, i.e. Hashtable
     private Map<String, Double> lastBidForStock = new HashMap<>();
     private Map<String, Double> lastAskForStock = new HashMap<>();
@@ -31,16 +33,18 @@ public class MyEWrapper extends EWrapperImpl{
     public MyEWrapper(String symbolArg) {
         super();
         String[] splitSymbols = symbolArg.split(",");
-        symbols = new HashSet(splitSymbols.length);
-        for (String symbol: splitSymbols) {
+        for (int i = 0; i < splitSymbols.length; i++) {
+            String symbol = splitSymbols[i];
             stockAndOptionContracts.put(symbol, null);
-            symbols.add(symbol);
+            sortedSymbols.put(i, symbol);
         }
     }
+
     @Override
     public void contractDetails(int reqId, ContractDetails contractDetails) {
         System.out.println(EWrapperMsgGenerator.contractDetails(reqId, contractDetails));
         String symbol = contractDetails.contract().symbol();
+        symbolToContract.put(symbol, contractDetails.contract());
         stockContractIdToSymbol.put(contractDetails.conid(), symbol);
         StockAndOptionContracts stockAndOptionContracts = this.stockAndOptionContracts.get(symbol);
         if (stockAndOptionContracts == null) {
@@ -118,6 +122,28 @@ public class MyEWrapper extends EWrapperImpl{
 
     }
 
+    @Override
+    public void error(int id, int errorCode, String errorMsg) {
+        System.out.println("Error. Id: " + id + ", Code: " + errorCode + ", Msg: " + errorMsg + "\n");
+        String symbol = contractRequestIdToSymbol.get(id);
+        if (symbol != null) {
+            Contract emptyContract = new Contract();
+            emptyContract.symbol(symbol);
+            symbolToContract.put(symbol, emptyContract);
+            System.out.println("No contract found for symbol: " + symbol);
+        }
+    }
+
+    Set<Contract> getContractsWithPrice() {
+       Set<Contract> contracts = Collections.synchronizedSet(new TreeSet<>());
+        for (Contract contract : symbolToContract.values()) {
+            if (calculateLastPriceForStock(contract.symbol()) != null) {
+                contracts.add(contract);
+            }
+        }
+        return contracts;
+    }
+
     public Map<String, StockAndOptionContracts> getStockAndOptionContracts() {
         return stockAndOptionContracts;
     }
@@ -138,16 +164,17 @@ public class MyEWrapper extends EWrapperImpl{
         this.stockDataReqIdToSymbol = stockDataReqIdToSymbol;
     }
 
-    public Set<String> getSymbols() {
-        return symbols;
+    public SortedMap<Integer, String> getSortedSymbols() {
+        return sortedSymbols;
     }
 
     public boolean isLoadedPriceForAllStocks() {
-        return lastPriceForStock.size() == symbols.size();
+        return lastPriceForStock.size() == numberOfValidatedSymbols();
     }
 
     public boolean isLoadedBidAndAskForAllStocks() {
-        return symbols.size() == lastBidForStock.size() && symbols.size() == lastAskForStock.size();
+        long numberOfValidatedSymbols = numberOfValidatedSymbols();
+        return numberOfValidatedSymbols == lastBidForStock.size() && numberOfValidatedSymbols == lastAskForStock.size();
     }
 
     public Map<Integer, String> getOptionDataReqIdToSymbol() {
@@ -188,7 +215,7 @@ public class MyEWrapper extends EWrapperImpl{
 
     public void removeContractsWithoutCalculatedLastPrice() {
         boolean loadedLastPriceForAllStocks = true;
-        for (String symbol : symbols) {
+        for (String symbol : sortedSymbols.values()) {
             if (calculateLastPriceForStock(symbol) == null) {
                 System.out.println("Removing Symbol - unable to retrieve stock price: " + symbol);
                 stockAndOptionContracts.remove(symbol);
@@ -213,6 +240,13 @@ public class MyEWrapper extends EWrapperImpl{
         return result;
     }
 
+    private long numberOfValidatedSymbols() {
+        return symbolToContract.values()
+                .stream()
+                .filter(c -> c.conid() != 0)
+                .count();
+    }
+
     public boolean haveDataToCreateAllOptionOrders() {
         int numberOfOptions = getOptionDataReqIdToSymbol().size();
         return numberOfOptions == getSymbolToModelImpliedVol().size() &&
@@ -226,5 +260,13 @@ public class MyEWrapper extends EWrapperImpl{
         optionDataRequestSymbols.removeAll(symbolToAskImpliedVol.keySet());
         optionDataRequestSymbols.removeAll(symbolToBidImpliedVol.keySet());
         return optionDataRequestSymbols;
+    }
+
+    public Map<Integer, String> getContractRequestIdToSymbol() {
+        return contractRequestIdToSymbol;
+    }
+
+    public Map<String, Contract> getSymbolToContract() {
+        return symbolToContract;
     }
 }

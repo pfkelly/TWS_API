@@ -100,7 +100,14 @@ class AccountPositionsMultiPanel extends JPanel {
             if (modelCode != null) {
                 modelCode = modelCode.trim();
             }
-            ApiDemo.INSTANCE.controller().reqPositionsMulti(account, modelCode, panel);
+            if (account == null || account.isEmpty()) {
+                List<String> accounts = ApiDemo.INSTANCE.accountList();
+                for (String acct : accounts) {
+                    ApiDemo.INSTANCE.controller().reqPositionsMulti(acct, modelCode, panel);
+                }
+            } else {
+                ApiDemo.INSTANCE.controller().reqPositionsMulti(account, modelCode, panel);
+            }
             m_resultsPanel.addTab("Positions "
                             + (!(account == null || account.isEmpty()) ? (" A:" + account) : "")
                             + (!(modelCode == null || modelCode.isEmpty()) ? (" M :" + modelCode) : ":"),
